@@ -1,5 +1,6 @@
 import Data.Maybe
 import Data.List
+import Data.Tuple
 
 import System.IO
 import System.Timeout
@@ -125,7 +126,12 @@ updateState :: State -> Maybe Vector -> State
 updateState state move = updateFruit $ updateSnake $ updateMove state move
 
 updateMove :: State -> Maybe Vector -> State
-updateMove state inputMove = state { move = inputMove <|> (move state) }
+updateMove state@(State { move = Just vector }) inputMove@(Just inputVector)
+    | inputVector == vectorOpposite vector 
+        = state
+    | otherwise                            
+        = state { move = inputMove <|> (move state) }
+updateMove state _ = state
 
 updateSnake :: State -> State
 updateSnake = updateSnakeTail . updateSnakeHead
@@ -151,6 +157,9 @@ slitherAndGrow snake _             = snake
 
 vectorAdd :: Vector -> Vector -> Vector
 vectorAdd (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
+
+vectorOpposite :: Vector -> Vector
+vectorOpposite (x, y) = (-x, -y)
 
 sample :: Int -> IO a -> IO (Maybe a)
 sample n f
