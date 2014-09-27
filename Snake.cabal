@@ -8,6 +8,10 @@ Category:      Games
 Synopsis:      Simple and short implementation of a Snake game. Any pull requests which make it shorter or cleaner would be greatly appreciated : ).
 Build-type:    Simple
 
-Library
+Executable Snake
   Build-Depends: base >= 4.6.0.1,
-                 monad-loops >= 0.4.2.1
+                 monad-loops >= 0.4.2.1,
+                 ansi-terminal >= 0.5,
+                 async >= 2.0.1.5,
+                 random >= 1.0.1.1
+  Main-Is:       Snake.hs
