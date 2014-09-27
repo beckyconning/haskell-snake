@@ -22,10 +22,10 @@ instance (Random x, Random y) => Random (x, y) where
               (y, gen3) = randomR (y1, y2) gen2
 
 data State = State { 
-    board    :: Int,
-    snake    :: [Vector],
-    fruit    :: Maybe (Vector, StdGen),
-    lastMove :: Maybe Vector
+    board :: Int,
+    snake :: [Vector],
+    fruit :: Maybe (Vector, StdGen),
+    move  :: Maybe Vector
 } deriving Show
 
 sampleLength :: Int
@@ -34,10 +34,10 @@ sampleLength = ((10 ^ 6) `div` 4)
 initialState :: IO State
 initialState = getStdGen >>= \stdGen ->
     return (State {
-        board    = 15,
-        snake    = [(4, 0), (3, 0), (2, 0), (1, 0), (0, 0)],
-        fruit    = randomElem (foldl1 (++) (buildBoard 15)) stdGen, 
-        lastMove = Just (1, 0)
+        board = 15,
+        snake = [(4, 0), (3, 0), (2, 0), (1, 0), (0, 0)],
+        fruit = randomElem (foldl1 (++) (buildBoard 15)) stdGen, 
+        move  = Just (1, 0)
     })
 
 randomElem :: [a] -> StdGen -> Maybe (a, StdGen)
@@ -55,10 +55,6 @@ newFruit state@(State { fruit = Just (_, stdGen) })
         where allPositions   = foldl1 (++) $ buildBoard $ board state
               validPositions = allPositions \\ (snake state)
 
-updateFruit :: State -> Maybe (Vector, StdGen)
-updateFruit state@(State { snake = (snakeHead:_) })
-    | fruit state `fruitPositionEquals` snakeHead = newFruit state
-    | otherwise                                   = fruit state
 
 main = initialState >>= \ state ->
     iterateUntilM gameOver 
@@ -117,22 +113,41 @@ fruitPositionEquals :: Maybe (Vector, StdGen) -> Vector -> Bool
 fruitPositionEquals (Just (position, _)) vector = position == vector
 fruitPositionEquals _ _                         = False
 
+snakeHasFruitInMouth :: State -> Bool
+snakeHasFruitInMouth state 
+    = (fruit state) `fruitPositionEquals` (head $ snake state)
+
 buildBoard :: Int -> [[(Int, Int)]]
-buildBoard size = [[(x, y) | x <- [0 .. size - 1]] | y <- reverse [0 .. size - 1]]
+buildBoard size 
+    = [[(x, y) | x <- [0 .. size - 1]] | y <- reverse [0 .. size - 1]]
 
 updateState :: State -> Maybe Vector -> State 
-updateState state inputMove
-    = (State {
-        board = board state,
-        snake = slither (snake state) validMove,
-        fruit = updateFruit state,
-        lastMove = validMove
-    })
-        where validMove = inputMove <|> (lastMove state)
+updateState state move = updateFruit $ updateSnake $ updateMove state move
 
-slither :: [Vector] -> Maybe Vector -> [Vector]
-slither snake (Just vector) = [(head snake) `vectorAdd` vector] ++ init snake
-slither snake _             = snake
+updateMove :: State -> Maybe Vector -> State
+updateMove state inputMove = state { move = inputMove <|> (move state) }
+
+updateSnake :: State -> State
+updateSnake = updateSnakeTail . updateSnakeHead
+
+updateFruit :: State -> State 
+updateFruit state
+    | snakeHasFruitInMouth state = state { fruit = newFruit state }
+    | otherwise                  = state 
+
+updateSnakeHead :: State -> State 
+updateSnakeHead state@(State { move = (Just vector) })
+    = state { snake = [head (snake state) `vectorAdd` vector] ++ snake state }
+updateSnakeHead state = state
+
+updateSnakeTail :: State -> State
+updateSnakeTail state
+    | snakeHasFruitInMouth state = state 
+    | otherwise                  = state { snake = init $ snake state }
+
+slitherAndGrow :: [Vector] -> Maybe Vector -> [Vector]
+slitherAndGrow snake (Just vector) = [(head snake) `vectorAdd` vector] ++ snake
+slitherAndGrow snake _             = snake
 
 vectorAdd :: Vector -> Vector -> Vector
 vectorAdd (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
