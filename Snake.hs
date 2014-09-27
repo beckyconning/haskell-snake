@@ -37,7 +37,7 @@ initialState = getStdGen >>= \stdGen ->
     return (State {
         board = 15,
         snake = [(4, 0), (3, 0), (2, 0), (1, 0), (0, 0)],
-        fruit = randomElem (foldl1 (++) (buildBoard 15)) stdGen, 
+        fruit = randomElem (concat (buildBoard 15)) stdGen, 
         move  = Just (1, 0)
     })
 
@@ -53,7 +53,7 @@ newFruit :: State -> Maybe (Vector, StdGen)
 newFruit state@(State { fruit = Nothing }) = Nothing
 newFruit state@(State { fruit = Just (_, stdGen) })
     = randomElem validPositions stdGen
-        where allPositions   = foldl1 (++) $ buildBoard $ board state
+        where allPositions   = concat $ buildBoard $ board state
               validPositions = allPositions \\ (snake state)
 
 main = initialState >>= \ state ->
