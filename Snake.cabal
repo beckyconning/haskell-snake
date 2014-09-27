@@ -9,5 +9,5 @@ Synopsis:      Simple and short implementation of a Snake game. Any pull request
 Build-type:    Simple
 
 Library
-  Build-Depends: base >= 4.7,
+  Build-Depends: base >= 4.6.0.1,
                  monad-loops >= 0.4.2.1
