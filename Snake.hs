@@ -56,7 +56,6 @@ newFruit state@(State { fruit = Just (_, stdGen) })
         where allPositions   = foldl1 (++) $ buildBoard $ board state
               validPositions = allPositions \\ (snake state)
 
-
 main = initialState >>= \ state ->
     iterateUntilM gameOver 
                   step 
