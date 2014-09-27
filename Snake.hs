@@ -150,10 +150,6 @@ updateSnakeTail state
     | snakeHasFruitInMouth state = state 
     | otherwise                  = state { snake = init $ snake state }
 
-slitherAndGrow :: [Vector] -> Maybe Vector -> [Vector]
-slitherAndGrow snake (Just vector) = [(head snake) `vectorAdd` vector] ++ snake
-slitherAndGrow snake _             = snake
-
 vectorAdd :: Vector -> Vector -> Vector
 vectorAdd (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 
