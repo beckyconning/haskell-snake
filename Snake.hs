@@ -1,6 +1,4 @@
-import Data.Maybe
 import Data.List
-import Data.Tuple
 
 import System.IO
 import System.Timeout
