@@ -25,21 +25,21 @@ oneSecond :: Int
 oneSecond = (10 :: Int) ^ (6 :: Int)
 
 sampleLength :: Int
-sampleLength = (oneSecond `div` 4)
+sampleLength = oneSecond `div` 4
 
 initialState :: IO State
 initialState = getStdGen >>= \stdGen ->
-    return (State {
+    return State {
         board = 15,
         snake = [(4, 0), (3, 0), (2, 0), (1, 0), (0, 0)],
         fruit = randomElem (concat (buildBoard 15)) stdGen, 
         move  = Just (1, 0)
-    })
+    }
 
 randomElem :: [a] -> StdGen -> Maybe (a, StdGen)
 randomElem [] _  = Nothing
 randomElem xs inputStdGen  = Just (element, stdGen)
-    where indexStdGenTuple = randomR (0, (length xs - 1)) inputStdGen
+    where indexStdGenTuple = randomR (0, length xs - 1) inputStdGen
           index            = fst indexStdGenTuple
           stdGen           = snd indexStdGenTuple
           element          = xs !! index 
@@ -49,7 +49,7 @@ newFruit (State { fruit = Nothing }) = Nothing
 newFruit state@(State { fruit = Just (_, stdGen) })
     = randomElem validPositions stdGen
         where allPositions   = concat $ buildBoard $ board state
-              validPositions = allPositions \\ (snake state)
+              validPositions = allPositions \\ snake state
 
 main :: IO State
 main = initialState >>= \ state -> iterateUntilM gameOver 
@@ -70,9 +70,9 @@ vectorFromChar (Just 's') = Just ( 0, -1)
 vectorFromChar (Just 'd') = Just ( 1,  0)
 vectorFromChar _          = Nothing
 
-getInput :: IO (Char)
-getInput = (hSetEcho stdin False >> hSetBuffering stdin NoBuffering 
-                                 >> hGetChar stdin)
+getInput :: IO Char
+getInput = hSetEcho stdin False >> hSetBuffering stdin NoBuffering 
+                                >> getChar
 
 gameOver :: State -> Bool
 gameOver (State { snake = [] }) = True
@@ -91,9 +91,9 @@ render state
               $ map (renderRow state) 
               $ buildBoard (board state)
 
-applyBorder :: Int -> [[Char]] -> [[Char]]
+applyBorder :: Int -> [String] -> [String]
 applyBorder size renderedRows 
-    = border ++ map (\row -> ['X'] ++ row ++ ['X']) renderedRows ++ border
+    = border ++ map (\row -> "X" ++ row ++ "X") renderedRows ++ border
         where border = [replicate (size + 2) 'X']
 
 renderRow :: State -> [Vector] -> String
@@ -111,7 +111,7 @@ fruitPositionEquals _ _                         = False
 
 snakeHasFruitInMouth :: State -> Bool
 snakeHasFruitInMouth state 
-    = (fruit state) `fruitPositionEquals` (head $ snake state)
+    = fruit state `fruitPositionEquals` head (snake state)
 
 buildBoard :: Int -> [[(Int, Int)]]
 buildBoard size 
@@ -126,7 +126,7 @@ updateMove state@(State { move = Just vector }) inputMove@(Just inputVector)
     | inputVector == vectorOpposite vector 
         = state
     | otherwise                            
-        = state { move = inputMove <|> (move state) }
+        = state { move = inputMove <|> move state }
 updateMove state _ = state
 
 updateSnake :: State -> State
@@ -139,7 +139,7 @@ updateFruit state
 
 updateSnakeHead :: State -> State 
 updateSnakeHead state@(State { move = (Just vector) })
-    = state { snake = [head (snake state) `vectorAdd` vector] ++ snake state }
+    = state { snake = head (snake state) `vectorAdd` vector : snake state }
 updateSnakeHead state = state
 
 updateSnakeTail :: State -> State
