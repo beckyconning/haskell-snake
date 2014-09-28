@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wall #-}
+
 import Data.List
 
 import System.IO
@@ -12,14 +14,6 @@ import Control.Applicative
 
 type Vector = (Int, Int)
 
-instance (Random x, Random y) => Random (x, y) where
-    random gen1 = ((x, y), gen3)
-        where (x, gen2) = random gen1
-              (y, gen3) = random gen2
-    randomR ((x1, y1), (x2, y2)) gen1 = ((x, y), gen3)
-        where (x, gen2) = randomR (x1, x2) gen1
-              (y, gen3) = randomR (y1, y2) gen2
-
 data State = State { 
     board :: Int,
     snake :: [Vector],
@@ -27,8 +21,11 @@ data State = State {
     move  :: Maybe Vector
 } deriving Show
 
+oneSecond :: Int
+oneSecond = (10 :: Int) ^ (6 :: Int)
+
 sampleLength :: Int
-sampleLength = ((10 ^ 6) `div` 4)
+sampleLength = (oneSecond `div` 4)
 
 initialState :: IO State
 initialState = getStdGen >>= \stdGen ->
@@ -40,28 +37,28 @@ initialState = getStdGen >>= \stdGen ->
     })
 
 randomElem :: [a] -> StdGen -> Maybe (a, StdGen)
-randomElem [] stdGen  = Nothing
-randomElem xs stdGen  = Just (element, newStdGen)
-    where random    = randomR (0, (length xs - 1)) stdGen
-          index     = fst random
-          newStdGen = snd random
-          element   = xs !! index 
+randomElem [] _  = Nothing
+randomElem xs inputStdGen  = Just (element, stdGen)
+    where indexStdGenTuple = randomR (0, (length xs - 1)) inputStdGen
+          index            = fst indexStdGenTuple
+          stdGen           = snd indexStdGenTuple
+          element          = xs !! index 
 
 newFruit :: State -> Maybe (Vector, StdGen)
-newFruit state@(State { fruit = Nothing }) = Nothing
+newFruit (State { fruit = Nothing }) = Nothing
 newFruit state@(State { fruit = Just (_, stdGen) })
     = randomElem validPositions stdGen
         where allPositions   = concat $ buildBoard $ board state
               validPositions = allPositions \\ (snake state)
 
-main = initialState >>= \ state ->
-    iterateUntilM gameOver 
-                  step 
-                  state
+main :: IO State
+main = initialState >>= \ state -> iterateUntilM gameOver 
+                                                 step 
+                                                 state
                      
 step :: State -> IO State
-step state = sample sampleLength getInput >>= \ move ->
-        displayState $ updateState state (vectorFromChar move)
+step state = sample sampleLength getInput >>= \ inputMove ->
+        displayState $ updateState state (vectorFromChar inputMove)
 
 displayState :: State -> IO State
 displayState state = clearScreen >> putStr (render state) >> return state
@@ -78,6 +75,7 @@ getInput = (hSetEcho stdin False >> hSetBuffering stdin NoBuffering
                                  >> hGetChar stdin)
 
 gameOver :: State -> Bool
+gameOver (State { snake = [] }) = True
 gameOver (State { 
     board = boardSize,
     snake = (snakeHead@(snakeHeadX, snakeHeadY):snakeBody)
@@ -120,7 +118,8 @@ buildBoard size
     = [[(x, y) | x <- [0 .. size - 1]] | y <- reverse [0 .. size - 1]]
 
 updateState :: State -> Maybe Vector -> State 
-updateState state move = updateFruit $ updateSnake $ updateMove state move
+updateState state inputMove 
+    = updateFruit $ updateSnake $ updateMove state inputMove
 
 updateMove :: State -> Maybe Vector -> State
 updateMove state@(State { move = Just vector }) inputMove@(Just inputVector)

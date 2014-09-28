@@ -15,3 +15,4 @@ Executable Snake
                  async >= 2.0.1.5,
                  random >= 1.0.1.1
   Main-Is:       Snake.hs
+  Ghc-Options:   -Wall
