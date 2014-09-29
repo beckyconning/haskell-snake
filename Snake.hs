@@ -52,9 +52,7 @@ newFruit state@(State { fruit = Just (_, stdGen) })
               validPositions = allPositions \\ snake state
 
 main :: IO State
-main = initialState >>= \ state -> iterateUntilM gameOver
-                                                 step
-                                                 state
+main = initialState >>= (iterateUntilM gameOver step)
                
 step :: State -> IO State
 step state = sample sampleLength getInput >>= \ inputMove ->
