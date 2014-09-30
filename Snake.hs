@@ -27,9 +27,8 @@ sampleLength :: Int
 sampleLength = oneSecond `div` 4
 
 main :: IO State
-main = bracket startInput
-               stopInput
-               (gameLoop . fst)
+main = clearScreen 
+    >> bracket startInput stopInput (gameLoop . fst)
 
 initialState :: IO State
 initialState = getStdGen 
@@ -84,7 +83,7 @@ stopInput (_, threadId) = killThread threadId
 
 displayState :: IO State -> IO State
 displayState getState = getState
-    >>= \ state -> clearScreen 
+    >>= \ state -> setCursorPosition 0 0 
     >> putStr (render state) 
     >> return state
 
