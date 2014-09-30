@@ -1,16 +1,23 @@
 {-# OPTIONS_GHC -Wall #-}
 
 import Data.List
+import Data.IORef
 
 import System.IO
-import System.Timeout
 import System.Random
 import System.Console.ANSI
 
 import Control.Concurrent
-import Control.Concurrent.Async
+import Control.Monad
 import Control.Monad.Loops
 import Control.Applicative
+import Control.Exception
+
+startInput :: IO (IO Char, ThreadId)
+startInput = hSetEcho stdin False
+    >> newIORef ' '
+    >>= \ charRef -> (forkIO . forever) (getChar >>= writeIORef charRef)
+    >>= \ threadId -> return (readIORef charRef, threadId)
 
 type Vector = (Int, Int)
 
@@ -28,8 +35,8 @@ sampleLength :: Int
 sampleLength = oneSecond `div` 4
 
 initialState :: IO State
-initialState = getStdGen >>= \stdGen ->
-    return State {
+initialState = getStdGen 
+    >>= \stdGen -> return State {
         board = 15,
         snake = [(4, 0), (3, 0), (2, 0), (1, 0), (0, 0)],
         fruit = randomElem (concat (buildBoard 15)) stdGen,
@@ -52,25 +59,37 @@ newFruit state@(State { fruit = Just (_, stdGen) })
               validPositions = allPositions \\ snake state
 
 main :: IO State
-main = initialState >>= (iterateUntilM gameOver step)
+main = initialState 
+    >>= (iterateUntilM gameOver step)
                
 step :: State -> IO State
-step state = sample sampleLength getInput >>= \ inputMove ->
-        displayState $ updateState state (vectorFromChar inputMove)
+step state = bracket startInput
+                     stopInput
+                     (displayState . (updateStateFromInput state) . sampleInput)
 
-displayState :: State -> IO State
-displayState state = clearScreen >> putStr (render state) >> return state
+sampleInput :: (IO Char, ThreadId) -> IO Char
+sampleInput (getLastChar, _) = threadDelay sampleLength
+    >> getLastChar
 
-vectorFromChar :: Maybe Char -> Maybe Vector
-vectorFromChar (Just 'w') = Just ( 0,  1)
-vectorFromChar (Just 'a') = Just (-1,  0)
-vectorFromChar (Just 's') = Just ( 0, -1)
-vectorFromChar (Just 'd') = Just ( 1,  0)
-vectorFromChar _          = Nothing
+updateStateFromInput :: State -> IO Char -> IO State
+updateStateFromInput state getInput = getInput
+    >>= \ char -> return (updateState state $ vectorFromChar char)
 
-getInput :: IO Char
-getInput = hSetEcho stdin False >> hSetBuffering stdin NoBuffering
-                                >> getChar
+stopInput :: (IO Char, ThreadId) -> IO ()
+stopInput (_, threadId) = killThread threadId
+
+displayState :: IO State -> IO State
+displayState getState = getState
+    >>= \ state -> clearScreen 
+    >> putStr (render state) 
+    >> return state
+
+vectorFromChar :: Char -> Maybe Vector
+vectorFromChar 'w' = Just ( 0,  1)
+vectorFromChar 'a' = Just (-1,  0)
+vectorFromChar 's' = Just ( 0, -1)
+vectorFromChar 'd' = Just ( 1,  0)
+vectorFromChar _   = Nothing
 
 gameOver :: State -> Bool
 gameOver (State { snake = [] }) = True
@@ -150,11 +169,3 @@ vectorAdd (x1, y1) (x2, y2) = (x1 + x2, y1 + y2)
 
 vectorOpposite :: Vector -> Vector
 vectorOpposite (x, y) = (-x, -y)
-
-sample :: Int -> IO a -> IO (Maybe a)
-sample n f
-    | n <  0    = fmap Just f
-    | n == 0    = return Nothing
-    | otherwise =
-        concurrently (timeout n f) (threadDelay n) >>= \ (result, _) ->
-            return result
