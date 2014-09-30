@@ -2,22 +2,14 @@
 
 import Data.List
 import Data.IORef
-
 import System.IO
 import System.Random
 import System.Console.ANSI
-
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.Loops
 import Control.Applicative
 import Control.Exception
-
-startInput :: IO (IO Char, ThreadId)
-startInput = hSetEcho stdin False
-    >> newIORef ' '
-    >>= \ charRef -> (forkIO . forever) (getChar >>= writeIORef charRef)
-    >>= \ threadId -> return (readIORef charRef, threadId)
 
 type Vector = (Int, Int)
 
@@ -33,6 +25,11 @@ oneSecond = (10 :: Int) ^ (6 :: Int)
 
 sampleLength :: Int
 sampleLength = oneSecond `div` 4
+
+main :: IO State
+main = bracket startInput
+               stopInput
+               (gameLoop . fst)
 
 initialState :: IO State
 initialState = getStdGen 
@@ -58,10 +55,6 @@ newFruit state@(State { fruit = Just (_, stdGen) })
         where allPositions   = concat $ buildBoard $ board state
               validPositions = allPositions \\ snake state
 
-main :: IO State
-main = bracket startInput
-               stopInput
-               (gameLoop . fst)
                
 gameLoop :: IO Char -> IO State
 gameLoop getInput = initialState 
@@ -79,6 +72,12 @@ sampleInput getInput = threadDelay sampleLength
 updateStateFromInput :: State -> IO Char -> IO State
 updateStateFromInput state inputSample = inputSample
     >>= \ char -> return (updateState state $ vectorFromChar char)
+
+startInput :: IO (IO Char, ThreadId)
+startInput = hSetEcho stdin False
+    >> newIORef ' '
+    >>= \ charRef -> (forkIO . forever) (getChar >>= writeIORef charRef)
+    >>= \ threadId -> return (readIORef charRef, threadId)
 
 stopInput :: (IO Char, ThreadId) -> IO ()
 stopInput (_, threadId) = killThread threadId
