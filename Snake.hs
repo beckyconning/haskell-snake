@@ -21,6 +21,11 @@ data State = State {
     move  :: Maybe Vector
 } deriving Show
 
+main :: IO State
+main = clearScreen
+    >> initialState 
+    >>= (iterateUntilM gameOver step)
+               
 oneSecond :: Int
 oneSecond = (10 :: Int) ^ (6 :: Int)
 
@@ -28,8 +33,8 @@ sampleLength :: Int
 sampleLength = oneSecond `div` 4
 
 initialState :: IO State
-initialState = getStdGen >>= \stdGen ->
-    return State {
+initialState = getStdGen 
+    >>= \stdGen -> return State {
         board = 15,
         snake = [(4, 0), (3, 0), (2, 0), (1, 0), (0, 0)],
         fruit = randomElem (concat (buildBoard 15)) stdGen,
@@ -51,15 +56,15 @@ newFruit state@(State { fruit = Just (_, stdGen) })
         where allPositions   = concat $ buildBoard $ board state
               validPositions = allPositions \\ snake state
 
-main :: IO State
-main = initialState >>= (iterateUntilM gameOver step)
-               
 step :: State -> IO State
-step state = sample sampleLength getInput >>= \ inputMove ->
+step state = sample sampleLength getInput 
+    >>= \ inputMove ->
         displayState $ updateState state (vectorFromChar inputMove)
 
 displayState :: State -> IO State
-displayState state = clearScreen >> putStr (render state) >> return state
+displayState state = setCursorPosition 0 0 
+    >> putStr (render state) 
+    >> return state
 
 vectorFromChar :: Maybe Char -> Maybe Vector
 vectorFromChar (Just 'w') = Just ( 0,  1)
@@ -69,8 +74,9 @@ vectorFromChar (Just 'd') = Just ( 1,  0)
 vectorFromChar _          = Nothing
 
 getInput :: IO Char
-getInput = hSetEcho stdin False >> hSetBuffering stdin NoBuffering
-                                >> getChar
+getInput = hSetEcho stdin False 
+    >> hSetBuffering stdin NoBuffering
+    >> getChar
 
 gameOver :: State -> Bool
 gameOver (State { snake = [] }) = True
@@ -156,5 +162,5 @@ sample n f
     | n <  0    = fmap Just f
     | n == 0    = return Nothing
     | otherwise =
-        concurrently (timeout n f) (threadDelay n) >>= \ (result, _) ->
-            return result
+        concurrently (timeout n f) (threadDelay n) 
+            >>= \ (result, _) -> return result
