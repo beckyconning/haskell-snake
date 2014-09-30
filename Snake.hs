@@ -59,20 +59,25 @@ newFruit state@(State { fruit = Just (_, stdGen) })
               validPositions = allPositions \\ snake state
 
 main :: IO State
-main = initialState 
-    >>= (iterateUntilM gameOver step)
+main = bracket startInput
+               stopInput
+               (gameLoop . fst)
                
-step :: State -> IO State
-step state = bracket startInput
-                     stopInput
-                     (displayState . (updateStateFromInput state) . sampleInput)
+gameLoop :: IO Char -> IO State
+gameLoop getInput = initialState 
+    >>= (iterateUntilM gameOver (step getInput))
+               
+step :: IO Char -> State -> IO State
+step getInput state = displayState $ 
+                      (updateStateFromInput state) $
+                      (sampleInput getInput)
 
-sampleInput :: (IO Char, ThreadId) -> IO Char
-sampleInput (getLastChar, _) = threadDelay sampleLength
-    >> getLastChar
+sampleInput :: IO Char -> IO Char
+sampleInput getInput = threadDelay sampleLength
+    >> getInput
 
 updateStateFromInput :: State -> IO Char -> IO State
-updateStateFromInput state getInput = getInput
+updateStateFromInput state inputSample = inputSample
     >>= \ char -> return (updateState state $ vectorFromChar char)
 
 stopInput :: (IO Char, ThreadId) -> IO ()
