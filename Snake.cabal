@@ -13,6 +13,8 @@ Executable Snake
                  monad-loops >= 0.4.2.1,
                  ansi-terminal >= 0.5,
                  async >= 2.0.1.5,
-                 random >= 1.0.1.1
+                 random >= 1.0.1.1,
+                 MonadRandom >= 0.4,
+                 transformers >= 0.4
   Main-Is:       Snake.hs
   Ghc-Options:   -Wall
