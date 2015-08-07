@@ -22,21 +22,21 @@ data State = State
     } deriving Show
 
 main :: IO ()
-main = do
-    clearScreen
-    is <- evalRandIO initialState
-    g <- getStdGen
-    loop is g
+main =
+  clearScreen >>
+  evalRandIO initialState >>= \is ->
+  getStdGen >>= \g ->
+  loop is g
 
 loop :: RandomGen g => State -> g -> IO ()
 loop s g
   | gameOver s = return ()
-  | otherwise  =  do
-      i <- sample sampleLength getInput
+  | otherwise  =
+      sample sampleLength getInput >>= \i ->
       let (state, g') = runRand (updateState s (vectorFromChar i)) g
-      setCursorPosition 0 0
-      putStr (render state)
-      loop state g'
+      in  setCursorPosition 0 0 >>
+          putStr (render state) >>
+          loop state g'
 
 sampleLength :: Int
 sampleLength = oneSecond `div` 4
@@ -44,8 +44,8 @@ sampleLength = oneSecond `div` 4
     oneSecond = 10 ^ (6 :: Int)
 
 initialState :: RandomGen g => Rand g State
-initialState = do
-    f <- uniform (concat (buildBoard 15))
+initialState =
+    uniform (concat (buildBoard 15)) >>= \f ->
     return $ State 15 [(4, 0), (3, 0), (2, 0), (1, 0), (0, 0)] f (1,0)
 
 newFruit :: (RandomGen g) => State -> Rand g Vector
@@ -63,10 +63,9 @@ vectorFromChar = \case
     _   -> ( 0,  0)
 
 getInput :: IO Char
-getInput = do
-    hSetEcho stdin False
-    hSetBuffering stdin NoBuffering
-    getChar
+getInput = hSetEcho stdin False >>
+           hSetBuffering stdin NoBuffering >>
+           getChar
 
 gameOver :: State -> Bool
 gameOver (State { snake = [] }) = True
